@@ -14,7 +14,7 @@ Modify `config.yaml` by cloning the respository and merging your changes
 
 ### Create and Fetch your API Keys 
 
-- Create or fetch your API key for [OpenAI](https://platform.openai.com/account/api-keys). Note: you will need an OpenAI account.
+- Create or fetch your API key, API base URL, and exact model ID from your OpenAI-Compatible provider. See the [configuration guide](./README.md#第三方-openai-compatible-apigithub-actions-配置).
 ![fork](./readme_images/openai.png)
 
 - Create or fetch your API key for [SendGrid](https://app.SendGrid.com/settings/api_keys). You will need a SendGrid account. The free tier will generally suffice. Make sure to [verify your sender identity](https://docs.sendgrid.com/for-developers/sending-email/sender-identity).
@@ -34,6 +34,8 @@ Go to the Settings tab on the top of this page, and then the "Actions" menu unde
 
 Create a new repository secret for each of the following using the button in the below image:
 - `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
 - `SENDGRID_API_KEY`
 - `FROM_EMAIL`
 - `TO_EMAIL`
@@ -42,7 +44,7 @@ Create a new repository secret for each of the following using the button in the
 
 ### Manually trigger the action, or wait until the scheduled trigger
 
-Go to the actions tab, and then click on "Daily Workflow" and "Run Workflow"
+Go to the actions tab, and then click on "Daily pipeline" and "Run workflow"
 
 ![trigger](./readme_images/trigger.png)
 
@@ -61,10 +63,12 @@ An alternative way to get started using this repository is to:
 
 1. Fork the repository
 2. Modify `config.yaml` and merge the changes into your main branch. If you want a different schedule than Sunday through Thursday at 1:25PM UTC, then also modify the file `.github/workflows/daily_pipeline.yaml`
-3. Create or fetch your API key for [OpenAI](https://platform.openai.com/account/api-keys).
+3. Obtain your API key, base URL, and model ID from your OpenAI-Compatible provider.
 4. Find your email provider's SMTP settings and set the secret `MAIL_CONNECTION` to that. It should be in the form `smtp://user:password@server:port` or `smtp+starttls://user:password@server:port`. Alternatively, if you are using Gmail, you can set `MAIL_USERNAME` and `MAIL_PASSWORD` instead, using an [application password](https://support.google.com/accounts/answer/185833).
 5. Set the following secrets [(under settings, Secrets and variables, repository secrets)](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository):
    - `OPENAI_API_KEY`
+   - `OPENAI_BASE_URL`
+   - `OPENAI_MODEL`
    - `MAIL_CONNECTION` (see above)
    - `MAIL_PASSWORD` (only if you don't have `MAIL_CONNECTION` set)
    - `MAIL_USERNAME` (only if you don't have `MAIL_CONNECTION` set)
@@ -84,16 +88,18 @@ You can access this digest as part of the github action artifact.
 
 If you do not wish to fork this repository, and would prefer to clone and run it locally instead:
 
-1. Install the requirements in `src/requirements.txt`
+1. Install the requirements in `requirements.txt` from the repository root
 2. Modify the configuration file `config.yaml`
-3. Create or fetch your API key for [OpenAI](https://platform.openai.com/account/api-keys).
+3. Obtain your API key, base URL, and model ID from your OpenAI-Compatible provider.
 4. Create or fetch your API key for [SendGrid](https://app.SendGrid.com/settings/api_keys) (optional, if you want the script to email you)
 5. Set the following secrets as environment variables: 
    - `OPENAI_API_KEY`
+   - `OPENAI_BASE_URL`
+   - `OPENAI_MODEL`
    - `SENDGRID_API_KEY` (only if using SendGrid)
    - `FROM_EMAIL` (only if using SendGrid. Note that this value must match the email you used to create the SendGrid Api Key.)
    - `TO_EMAIL` (only if using SendGrid)
-6. Run `python action.py`.
+6. Run `python src/action.py` from the repository root.
 7. If you are not using SendGrid, the html of the digest will be written to `digest.html`. You can then use your favorite webbrowser to view it.
 
 You may want to use something like crontab to schedule the digest.

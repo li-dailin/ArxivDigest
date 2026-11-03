@@ -10,8 +10,8 @@ import pytz
 
 def _download_new_papers(field_abbr):
     NEW_SUB_URL = f'https://arxiv.org/list/{field_abbr}/new'  # https://arxiv.org/list/cs/new
-    page = urllib.request.urlopen(NEW_SUB_URL)
-    soup = bs(page)
+    with urllib.request.urlopen(NEW_SUB_URL, timeout=30) as page:
+        soup = bs(page, "html.parser")
     content = soup.body.find("div", {'id': 'content'})
 
     # find the first h3 element in content
@@ -26,14 +26,13 @@ def _download_new_papers(field_abbr):
     new_paper_list = []
     for i in tqdm.tqdm(range(len(dt_list))):
         paper = {}
-        paper_number = dt_list[i].text.strip().split(" ")[2].split(":")[-1]
+        paper_number = dt_list[i].select_one('a[href^="/abs/"]')["href"].split("/abs/", 1)[1]
         paper['main_page'] = arxiv_base + paper_number
         paper['pdf'] = arxiv_base.replace('abs', 'pdf') + paper_number
 
-        paper['title'] = dd_list[i].find("div", {"class": "list-title mathjax"}).text.replace("Title: ", "").strip()
-        paper['authors'] = dd_list[i].find("div", {"class": "list-authors"}).text \
-                            .replace("Authors:\n", "").replace("\n", "").strip()
-        paper['subjects'] = dd_list[i].find("div", {"class": "list-subjects"}).text.replace("Subjects: ", "").strip()
+        paper['title'] = dd_list[i].find("div", {"class": "list-title mathjax"}).get_text(" ", strip=True).removeprefix("Title:").strip()
+        paper['authors'] = dd_list[i].find("div", {"class": "list-authors"}).get_text(" ", strip=True).removeprefix("Authors:").strip()
+        paper['subjects'] = dd_list[i].find("div", {"class": "list-subjects"}).get_text(" ", strip=True).removeprefix("Subjects:").strip()
         paper['abstract'] = dd_list[i].find("p", {"class": "mathjax"}).text.replace("\n", " ").strip()
         new_paper_list.append(paper)
 

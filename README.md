@@ -28,7 +28,7 @@ Staying up to date on [arXiv](https://arxiv.org) papers can take a considerable 
 This repository offers a method to curate a daily digest, sorted by relevance, using large language models. These models are conditioned based on your personal research interests, which are described in natural language. 
 
 * You modify the configuration file `config.yaml` with an arXiv Subject, some set of Categories, and a natural language statement about the type of papers you are interested in.  
-* The code pulls all the abstracts for papers in those categories and ranks how relevant they are to your interest on a scale of 1-10 using `gpt-3.5-turbo-16k`.
+* The code pulls all the abstracts for papers in those categories and ranks how relevant they are to your interest on a scale of 1-10 using the model configured in `OPENAI_MODEL`.
 * The code then emits an HTML digest listing all the relevant papers, and optionally emails it to you using [SendGrid](https://sendgrid.com). You will need to have a SendGrid account with an API key for this functionality to work.  
 
 ### Testing it out with Hugging Face:
@@ -62,6 +62,40 @@ You can also send yourself an email of the digest by creating a SendGrid account
 
 ## 💡 Usage
 
+### 第三方 OpenAI-Compatible API：GitHub Actions 配置
+
+1. 在自己的 fork 打开 **Settings → Secrets and variables → Actions → Secrets → New repository secret**，添加下列三个 **Repository secrets**：
+
+   | 名称 | 内容 |
+   | --- | --- |
+   | `OPENAI_API_KEY` | 第三方服务商的 API Key |
+   | `OPENAI_BASE_URL` | 该服务商文档中的 API Base URL，不包含 `/chat/completions` |
+   | `OPENAI_MODEL` | 同一服务商提供的准确模型 ID |
+
+   三项均通过工作流 `env` 传入程序；GitHub 不会自动把 Secrets 注入 Python。留空或只建在 Variables 中都会报缺少环境变量。模型名和 Base URL 本身通常不保密，这里统一使用 Secrets 便于配置。不要把真实值写进仓库。
+
+2. 保留 `config.yaml` 中自己的分类、研究兴趣和阈值；无需在 Python 源码中写模型名。本项目保留 `openai==0.27.8`，显式把 `OPENAI_BASE_URL` 赋给旧 SDK 的 `openai.api_base`，并使用 Chat Completions。服务商和所选模型须支持 `/chat/completions`、`messages`、`max_tokens`、`temperature` 等请求参数，以及按提示词返回逐行 JSON 评分；不保证任意“兼容”或推理模型都能直接使用。
+
+3. 提交并推送代码后，打开 **Actions → Daily pipeline → Run workflow**，选择 `main`。暂不配置邮件 Secrets，就只生成 HTML。
+
+4. 在 **Generate Digest** 日志依次核对 `Fetched papers`、`Papers after category filter`、`Scoring papers`、`Papers at or above threshold`。成功后下载 **Artifacts → digest.html**，解压后打开 HTML。
+
+   分类无匹配或全部低于阈值时，HTML 会明确说明原因。模型响应为空、截断或评分数量不符时，任务会失败，不能把这种失败视为“没有相关论文”。`No sendgrid api key found. Skipping email` 只表示未启用邮件，不影响生成报告。
+
+本地运行：使用 Python 3.9 或以上（Actions 使用 3.11），在仓库根目录执行：
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.template .env
+# 仅在本地 .env 填写上述三项；.env 已被 Git 忽略。
+python -m unittest discover -s tests -v
+python src/action.py
+```
+
+测试使用本地模拟 HTTP 接口，不需要真实 API Key，不调用付费服务。首次恢复分类筛选后可能有数百篇候选，程序会为全部候选评分；请先确认服务商额度。
+
 ### Running as a github action using SendGrid (Recommended).
 
 The recommended way to get started using this repository is to:
@@ -69,7 +103,9 @@ The recommended way to get started using this repository is to:
 1. Fork the repository
 2. Modify `config.yaml` and merge the changes into your main branch.
 3. Set the following secrets [(under settings, Secrets and variables, repository secrets)](https://docs.github.com/en/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository). See [Advanced Usage](./advanced_usage.md#create-and-fetch-your-api-keys) for more details on how to create and get OpenAi and SendGrid API keys:
-   - `OPENAI_API_KEY` From [OpenAI](https://platform.openai.com/account/api-keys)
+   - `OPENAI_API_KEY` From your OpenAI-Compatible API provider
+   - `OPENAI_BASE_URL` The provider's API base URL
+   - `OPENAI_MODEL` The provider's exact model ID
    - `SENDGRID_API_KEY` From [SendGrid](https://app.SendGrid.com/settings/api_keys)
    - `FROM_EMAIL` This value must match the email you used to create the SendGrid API Key.
    - `TO_EMAIL`

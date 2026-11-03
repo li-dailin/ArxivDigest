@@ -221,7 +221,7 @@ category_map = {
 }
 
 
-def generate_body(topic, categories, interest, threshold):
+def generate_body(topic, categories, interest, threshold, model_name=None):
     if topic == "Physics":
         raise RuntimeError("You must choose a physics subtopic.")
     elif topic in physics_topics:
@@ -234,21 +234,29 @@ def generate_body(topic, categories, interest, threshold):
         for category in categories:
             if category not in category_map[topic]:
                 raise RuntimeError(f"{category} is not a category of {topic}")
-        papers = get_papers(abbr)
+    papers = get_papers(abbr)
+    print(f"Fetched papers: {len(papers)}")
+    if categories:
         papers = [
             t
             for t in papers
             if bool(set(process_subject_fields(t["subjects"])) & set(categories))
         ]
-    else:
-        papers = get_papers(abbr)
+    print(f"Papers after category filter: {len(papers)}")
+    if not papers:
+        return "<p>No papers matched the selected categories in this arXiv listing.</p>"
     if interest:
+        print(f"Scoring papers: {len(papers)}")
         relevancy, hallucination = generate_relevance_score(
             papers,
             query={"interest": interest},
             threshold_score=threshold,
             num_paper_in_prompt=16,
+            model_name=model_name,
         )
+        print(f"Papers at or above threshold {threshold}: {len(relevancy)}")
+        if not relevancy:
+            return f"<p>No papers reached the relevance threshold ({threshold}/10).</p>"
         body = "<br><br>".join(
             [
                 f'Title: <a href="{paper["main_page"]}">{paper["title"]}</a><br>Authors: {paper["authors"]}<br>Score: {paper["Relevancy score"]}<br>Reason: {paper["Reasons for match"]}'
@@ -281,13 +289,12 @@ if __name__ == "__main__":
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
-    if "OPENAI_API_KEY" not in os.environ:
-        raise RuntimeError("No openai api key found")
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
-    openai.api_base = os.environ.get(
-        "OPENAI_BASE_URL",
-        "https://api.openai.com/v1"
-    )
+    for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"):
+        if not os.environ.get(name, "").strip():
+            raise RuntimeError(f"Missing environment variable: {name}")
+    openai.api_key = os.environ["OPENAI_API_KEY"].strip()
+    openai.api_base = os.environ["OPENAI_BASE_URL"].strip().rstrip("/")
+    model_name = os.environ["OPENAI_MODEL"].strip()
 
     topic = config["topic"]
     categories = config["categories"]
@@ -295,9 +302,12 @@ if __name__ == "__main__":
     to_email = os.environ.get("TO_EMAIL")
     threshold = config["threshold"]
     interest = config["interest"]
-    body = generate_body(topic, categories, interest, threshold)
-    with open("digest.html", "w") as f:
-        f.write(body)
+    body = generate_body(topic, categories, interest, threshold, model_name=model_name)
+    with open("digest.html", "w", encoding="utf-8") as f:
+        f.write(
+            '<!doctype html><html><head><meta charset="utf-8">'
+            '<title>arXiv Digest</title></head><body>' + body + '</body></html>'
+        )
     if os.environ.get("SENDGRID_API_KEY", None):
         sg = SendGridAPIClient(api_key=os.environ.get("SENDGRID_API_KEY"))
         from_email = Email(from_email)  # Change to your verified sender

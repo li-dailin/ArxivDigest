@@ -2,7 +2,7 @@
 run:
 python -m relevancy run_all_day_paper \
   --output_dir ./data \
-  --model_name="deepseek-flash" \
+  --model_name="$OPENAI_MODEL" \
 """
 import time
 import json
@@ -37,8 +37,10 @@ def encode_prompt(query, prompt_papers):
 
 def post_process_chat_gpt_response(paper_data, response, threshold_score=8):
     selected_data = []
-    if response is None:
-        return []
+    if response is None or not (response.get('message', {}).get('content') or '').strip():
+        raise RuntimeError("The model returned no scoring content")
+    if response.get('finish_reason') == 'length':
+        raise RuntimeError("The model response was truncated; reduce the scoring batch size")
     json_items = response['message']['content'].replace("\n\n", "\n").split("\n")
     pattern = r"^\d+\. |\\"
     import pprint
@@ -58,13 +60,12 @@ def post_process_chat_gpt_response(paper_data, response, threshold_score=8):
         else:
             scores.append(int(temp))
     if len(score_items) != len(paper_data):
-        score_items = score_items[:len(paper_data)]
-        hallucination = True
-    else:
-        hallucination = False
+        raise RuntimeError(
+            f"Expected {len(paper_data)} paper scores, received {len(score_items)}"
+        )
+    hallucination = False
 
     for idx, inst in enumerate(score_items):
-        # if the decoding stops due to length, the last example is likely truncated so we discard it
         if scores[idx] < threshold_score:
             continue
         output_str = "Title: " + paper_data[idx]["title"] + "\n"
@@ -83,20 +84,25 @@ def find_word_in_string(w, s):
 
 
 def process_subject_fields(subjects):
-    all_subjects = subjects.split(";")
-    all_subjects = [s.split(" (")[0] for s in all_subjects]
-    return all_subjects
+    subjects = re.sub(r"^\s*Subjects:\s*", "", subjects)
+    return [
+        " ".join(subject.split("(", 1)[0].split())
+        for subject in subjects.split(";") if subject.strip()
+    ]
 
 def generate_relevance_score(
     all_papers,
     query,
-    model_name="deepseek-flash",
+    model_name=None,
     threshold_score=8,
     num_paper_in_prompt=4,
     temperature=0.4,
     top_p=1.0,
     sorting=True
 ):
+    model_name = model_name or os.environ.get("OPENAI_MODEL", "").strip()
+    if not model_name:
+        raise RuntimeError("Set OPENAI_MODEL to your provider's exact model ID")
     ans_data = []
     request_idx = 1
     hallucination = False
@@ -138,7 +144,7 @@ def run_all_day_paper(
     query={"interest":"", "subjects":["Computation and Language", "Artificial Intelligence"]},
     date=None,
     data_dir="../data",
-    model_name="deepseek-flash",
+    model_name=None,
     threshold_score=8,
     num_paper_in_prompt=8,
     temperature=0.4,

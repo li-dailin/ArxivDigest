@@ -102,6 +102,7 @@ def openai_completion(
             try:
                 shared_kwargs = dict(
                     model=model_name,
+                    request_timeout=60,
                     **batch_decoding_args.__dict__,
                     **decoding_kwargs,
                 )
@@ -121,14 +122,13 @@ def openai_completion(
                 break
             except openai.error.OpenAIError as e:
                 logging.warning(f"OpenAIError: {e}.")
+                if not backoff:
+                    raise
+                backoff -= 1
                 if "Please reduce your prompt" in str(e):
                     batch_decoding_args.max_tokens = int(batch_decoding_args.max_tokens * 0.8)
                     logging.warning(f"Reducing target length to {batch_decoding_args.max_tokens}, Retrying...")
-                elif not backoff:
-                    logging.error("Hit too many failures, exiting")
-                    raise e
                 else:
-                    backoff -= 1
                     logging.warning("Hit request rate limit; retrying...")
                     time.sleep(sleep_time)  # Annoying rate limit on requests.
 
