@@ -2,7 +2,7 @@
 run:
 python -m relevancy run_all_day_paper \
   --output_dir ./data \
-  --model_name="gpt-6-luna" \
+  --model_name="deepseek-flash" \
 """
 import time
 import json
@@ -90,7 +90,7 @@ def process_subject_fields(subjects):
 def generate_relevance_score(
     all_papers,
     query,
-    model_name="gpt-3.5-turbo-16k",
+    model_name="deepseek-flash",
     threshold_score=8,
     num_paper_in_prompt=4,
     temperature=0.4,
@@ -117,7 +117,6 @@ def generate_relevance_score(
             model_name=model_name,
             batch_size=1,
             decoding_args=decoding_args,
-            logit_bias={"100257": -100},  # prevent the <|endoftext|> from being generated
         )
         print ("response", response['message']['content'])
         request_duration = time.time() - request_start
@@ -139,7 +138,7 @@ def run_all_day_paper(
     query={"interest":"", "subjects":["Computation and Language", "Artificial Intelligence"]},
     date=None,
     data_dir="../data",
-    model_name="gpt-3.5-turbo-16k",
+    model_name="deepseek-flash",
     threshold_score=8,
     num_paper_in_prompt=8,
     temperature=0.4,
