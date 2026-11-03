@@ -26,6 +26,18 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: python -m unittest discover -s tests -v
+    - name: Check API connectivity
+      run: |
+        if [ -z "$OPENAI_BASE_URL" ]; then
+          echo "Missing OPENAI_BASE_URL secret"
+          exit 1
+        fi
+        # No API key is sent. Any HTTP response (including 401) confirms connectivity.
+        curl --silent --show-error --connect-timeout 10 --max-time 20 \
+          --output /dev/null --write-out 'API connectivity: HTTP %{http_code}\n' \
+          "${OPENAI_BASE_URL%/}/models"
+      env:
+        OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
     - name: Generate Digest 
       run: |
         python src/action.py

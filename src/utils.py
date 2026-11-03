@@ -102,7 +102,7 @@ def openai_completion(
             try:
                 shared_kwargs = dict(
                     model=model_name,
-                    request_timeout=60,
+                    request_timeout=(10, 60),
                     **batch_decoding_args.__dict__,
                     **decoding_kwargs,
                 )
@@ -122,6 +122,12 @@ def openai_completion(
                 break
             except openai.error.OpenAIError as e:
                 logging.warning(f"OpenAIError: {e}.")
+                if isinstance(e, (openai.error.APIConnectionError, openai.error.Timeout)):
+                    logging.error(
+                        "Cannot reach the model API or the request timed out. "
+                        "Check OPENAI_BASE_URL and this runner's network access."
+                    )
+                    raise
                 if not backoff:
                     raise
                 backoff -= 1
@@ -129,8 +135,8 @@ def openai_completion(
                     batch_decoding_args.max_tokens = int(batch_decoding_args.max_tokens * 0.8)
                     logging.warning(f"Reducing target length to {batch_decoding_args.max_tokens}, Retrying...")
                 else:
-                    logging.warning("Hit request rate limit; retrying...")
-                    time.sleep(sleep_time)  # Annoying rate limit on requests.
+                    logging.warning("Model API request failed; retrying...")
+                    time.sleep(sleep_time)
 
     if return_text:
         completions = [completion.text for completion in completions]

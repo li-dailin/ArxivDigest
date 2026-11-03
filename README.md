@@ -82,6 +82,10 @@ You can also send yourself an email of the digest by creating a SendGrid account
 
    分类无匹配或全部低于阈值时，HTML 会明确说明原因。模型响应为空、截断或评分数量不符时，任务会失败，不能把这种失败视为“没有相关论文”。`No sendgrid api key found. Skipping email` 只表示未启用邮件，不影响生成报告。
 
+如果使用中科大平台，官方 [API 使用说明](https://llm.ustc.edu.cn/guide/api-usage/) 给出的 Base URL 是 `https://api.llm.ustc.edu.cn/v1`；应保留 `/v1`，模型 ID 以项目当前授权列表为准。
+
+工作流先执行 **Check API connectivity**，不带密钥访问 Base URL 下的 `/models`。收到 HTTP 401 等响应只说明网络及 HTTPS 可达，不代表密钥或模型已验证；连接超时（HTTP 000）则需要检查运行机器到平台的网络。少写 `/v1` 会造成接口路径错误，但不会解释 TCP 连接超时。GitHub 托管 runner 使用自己的网络，本机连接校园网或 VPN 不会改变它的出口；如果托管 runner 无法连接，应改用它能访问的 API，或在获准且可访问平台的机器上运行任务。不要仅靠加长超时反复重跑。
+
 本地运行：使用 Python 3.9 或以上（Actions 使用 3.11），在仓库根目录执行：
 
 ```sh

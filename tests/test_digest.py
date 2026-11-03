@@ -72,6 +72,20 @@ class ParsingTests(unittest.TestCase):
                 utils.openai_completion("test", utils.OpenAIDecodingArguments(), model_name="test")
         self.assertEqual(create.call_count, 4)
 
+    def test_connection_failures_stop_without_outer_retries(self):
+        for error_type in (openai.error.APIConnectionError, openai.error.Timeout):
+            with self.subTest(error=error_type.__name__):
+                error = error_type("Connection timed out")
+                with patch.object(openai.ChatCompletion, "create", side_effect=error) as create:
+                    with patch("utils.time.sleep") as sleep:
+                        with self.assertLogs(level="WARNING") as logs:
+                            with self.assertRaises(error_type):
+                                utils.openai_completion("test", utils.OpenAIDecodingArguments(), model_name="test")
+                self.assertEqual(create.call_count, 1)
+                sleep.assert_not_called()
+                self.assertIn("network access", " ".join(logs.output))
+                self.assertNotIn("rate limit", " ".join(logs.output))
+
     def test_workflow_passes_all_three_secrets(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/daily_pipeline.yaml").read_text())
         steps = workflow["jobs"]["generate_and_send_digest"]["steps"]
