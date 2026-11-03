@@ -3,13 +3,16 @@ topic: "Computer Science"
 # An empty list here will include all categories in a topic
 # Use the natural language names of the topics, found here: https://arxiv.org
 # Including more categories will result in more calls to the large language model
-categories: ["Artificial Intelligence", "Computation and Language"]
+categories:
+  - "Machine Learning"
+  - "Hardware Architecture"
+  - "Performance"
 
 # Relevance score threshold. abstracts that receive a score less than this from the large language model
 # will have their papers filtered out.
 #
 # Must be within 1-10
-threshold: 7
+threshold: 6
 
 # A natural language statement that the large language model will use to judge which papers are relevant 
 #
@@ -21,7 +24,44 @@ threshold: 7
 # This can be empty, which just return a full list of papers with no judgement or filtering,
 # in whatever order arXiv responds with.
 interest: |
-  1. Large language model pretraining and finetunings
-  2. Multimodal machine learning
-  3. Do not care about specific application, for example, information extraction, summarization, etc.
-  4. Not interested in paper focus on specific languages, e.g., Arabic, Chinese, etc.
+  I am a beginning ML Systems researcher studying
+  cross-platform latency prediction for DNN inference
+  on mobile and edge devices.
+
+  CORE RESEARCH (highest priority):
+  - HELP-style few-shot latency prediction and
+    hardware-aware meta-learning.
+  - nn-Meter-style kernel-level latency prediction,
+    kernel fusion, and end-to-end latency composition.
+  - LitePred-style cross-device and cross-platform
+    transfer learning.
+  - Device embeddings, latency regression, and
+    sample-efficient target-device adaptation.
+  - CPU, GPU, NPU inference performance on edge devices.
+
+  CLOSELY RELATED RESEARCH:
+  - Hardware-aware neural architecture search (NAS).
+  - Operator-level cost models and performance predictors.
+  - Compiler and runtime optimizations for DNN inference.
+  - Profiling, benchmarking, and performance modeling.
+  - Active learning and measurement selection.
+  - Heterogeneous computing systems.
+
+  EXPLORATORY RESEARCH:
+  - Foundations of meta-learning, few-shot learning,
+    transfer learning, and pretrain-then-finetune,
+    especially their differences and relationships
+    in HELP-style cross-device latency prediction.
+  - Mobile and edge AI inference systems.
+  - Efficient LLM inference on constrained hardware.
+  - Graph neural networks for cost prediction.
+  - General ML Systems methodology and evaluation.
+
+  Prioritize research with concrete algorithms,
+  system designs, experiments, and real hardware data.
+
+  Include useful foundational and adjacent papers,
+  even when they are not directly about latency.
+
+  Deprioritize generic AI application papers with
+  no meaningful systems or efficiency contribution.
